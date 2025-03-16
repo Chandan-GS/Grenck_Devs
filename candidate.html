@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Secure Test Platform</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fb;
+            color: #2d3748;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .phase-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #1a202c;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        p {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            resize: vertical;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #2d3748;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+        }
+
+        textarea:disabled {
+            background-color: #edf2f7;
+            cursor: not-allowed;
+        }
+
+        #time-remaining {
+            background: #ebf8ff;
+            color: #2b6cb0;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        #cheating-log {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fff5f5;
+            color: #c53030;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: none;
+            animation: slideUp 0.3s ease-out;
+            z-index: 1000;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, 100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+
+        .warning-banner {
+            background: #fffaf0;
+            border-left: 4px solid #ed8936;
+            color: #c05621;
+            padding: 16px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+            font-weight: 500;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #48bb78;
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: #718096;
+        }
+
+        .calibration-progress {
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: #4299e1;
+            width: 0%;
+            transition: width 1s linear;
+        }
+
+        .question-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .question-type {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #718096;
+            margin-bottom: 8px;
+            letter-spacing: 0.05em;
+        }
+
+        .question-text {
+            font-size: 16px;
+            color: #2d3748;
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        .mcq-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .mcq-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mcq-option:hover {
+            background: #f7fafc;
+            border-color: #cbd5e0;
+        }
+
+        .mcq-option input[type="radio"] {
+            width: 16px;
+            height: 16px;
+        }
+
+        .code-editor {
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            background: #2d3748;
+            color: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .code-input {
+            width: 100%;
+            min-height: 200px;
+            background: #2d3748;
+            color: #fff;
+            border: none;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            resize: vertical;
+            padding: 8px;
+            line-height: 1.5;
+        }
+
+        .code-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #4299e1;
+        }
+
+        .submit-section {
+            margin-top: 30px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .submit-button {
+            background-color: #48bb78;
+            color: white;
+            padding: 12px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .submit-button:hover {
+            background-color: #38a169;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .submit-button:disabled {
+            background-color: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #fullscreen-prompt {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            z-index: 1000;
+        }
+
+        #fullscreen-button {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #fullscreen-button:hover {
+            background: #3182ce;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="warning-banner">
+            Warning: This test is monitored. Attempts to cheat will be recorded.
+        </div>
+
+        <div id="calibration" class="phase-container">
+            <h1>Calibration Phase</h1>
+            <p>Please type here and move your mouse naturally for 2 minutes. This helps us establish your normal
+                behavior patterns.</p>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <div class="status-text">Calibration in progress</div>
+            </div>
+            <div class="calibration-progress">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div id="time-remaining">Time remaining: 2:00</div>
+            <textarea id="calibration-text" placeholder="Start typing here..."></textarea>
+        </div>
+
+        <div id="fullscreen-prompt" style="display: none;">
+            <h2>Enter Fullscreen Mode</h2>
+            <p>Please click the button below to enter fullscreen mode and begin your assessment.</p>
+            <button id="fullscreen-button">Start Assessment in Fullscreen</button>
+        </div>
+
+        <div id="assessment" class="phase-container" style="display:none;">
+            <h1>Assessment</h1>
+            <p>Complete all questions below. Stay focused and avoid switching tabs or leaving the test window.</p>
+
+            <div class="question-section">
+                <div class="question-type">Multiple Choice</div>
+                <div class="question-text">What is the primary purpose of the 'use strict' directive in JavaScript?
+                </div>
+                <div class="mcq-options">
+                    <label class="mcq-option">
+                        <input type="radio" name="q1" value="a">
+                        <span>To enable strict type checking</span>
+                    </label>
+                    <label class="mcq-option">
+                        <input type="radio" name="q1" value="b">
+                        <span>To catch common coding mistakes and prevent unsafe actions</span>
+                    </label>
+                    <label class="mcq-option">
+                        <input type="radio" name="q1" value="c">
+                        <span>To improve code performance</span>
+                    </label>
+                    <label class="mcq-option">
+                        <input type="radio" name="q1" value="d">
+                        <span>To enable new JavaScript features</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="question-section">
+                <div class="question-type">Essay</div>
+                <div class="question-text">Explain the concept of closures in JavaScript and provide a practical example
+                    of their use.</div>
+                <textarea placeholder="Write your answer here..." rows="8"></textarea>
+            </div>
+
+            <div class="question-section">
+                <div class="question-type">Coding</div>
+                <div class="question-text">Write a function that finds the longest palindromic substring in a given
+                    string.</div>
+                <div class="code-editor">
+                    <textarea class="code-input" placeholder="// Write your code here
+function findLongestPalindrome(str) {
+    // Your implementation here
+}">
+                    </textarea>
+                </div>
+            </div>
+
+            <div class="submit-section">
+                <button id="submit-assessment" class="submit-button">Submit Assessment</button>
+            </div>
+        </div>
+
+        <div id="cheating-log"></div>
+    </div>
+
+    <script>
+        const socket = io();
+        socket.emit('join', 'candidate');
+
+        let calibrationStart = Date.now();
+        let mouseSpeeds = [];
+        let keyIntervals = [];
+        let lastKeyTime = null;
+        let lastMousePos = null;
+        let inactivityTimer = null;
+        let mouseMean, mouseStd, keyMean, keyStd;
+
+        // Track blocked activities
+        let blockedActivities = {
+            tabSwitch: true,
+            copyPaste: true,
+            rightClick: true,
+            shortcuts: true
+        };
+
+        // Update blocked activities when received from server
+        socket.on('blocked_activities_update', (activities) => {
+            console.log('Received blocked activities update:', activities);
+            blockedActivities = activities;
+            // Update user-select based on copyPaste setting
+            document.body.style.userSelect = activities.copyPaste ? 'none' : 'text';
+        });
+
+        // Prevent text selection if copy/paste is blocked
+        document.body.style.userSelect = 'none';
+
+        // Prevent right click if blocked
+        document.addEventListener('contextmenu', function (e) {
+            if (blockedActivities.rightClick) {
+                e.preventDefault();
+                socket.emit('event', { type: 'right_click' });
+                showCheatingWarning('Right-clicking is not allowed during the test.');
+            }
+        });
+
+        // Enhanced copy/paste prevention
+        function preventCopyPaste(e) {
+            if (blockedActivities.copyPaste) {
+                e.preventDefault();
+                const eventType = e.type;
+                socket.emit('event', { type: 'copy_paste', value: eventType });
+                showCheatingWarning(`${eventType.charAt(0).toUpperCase() + eventType.slice(1)} is not allowed during the test.`);
+                return false;
+            }
+        }
+
+        // Add all copy/paste related event listeners
+        ['copy', 'paste', 'cut'].forEach(event => {
+            document.addEventListener(event, preventCopyPaste);
+        });
+
+        // Prevent keyboard shortcuts and special keys
+        document.addEventListener('keydown', function (e) {
+            // Block copy/paste shortcuts
+            if (blockedActivities.copyPaste && (e.ctrlKey || e.metaKey) &&
+                ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
+                e.preventDefault();
+                socket.emit('event', { type: 'copy_paste', value: `shortcut_${e.key}` });
+                showCheatingWarning('Copy/paste shortcuts are not allowed during the test.');
+                return false;
+            }
+
+            // Block other shortcuts
+            if (blockedActivities.shortcuts && (e.ctrlKey || e.metaKey) &&
+                ['a', 'p', 'r', 'f'].includes(e.key.toLowerCase())) {
+                e.preventDefault();
+                socket.emit('event', { type: 'keyboard_shortcut', value: e.key });
+                showCheatingWarning('Keyboard shortcuts are not allowed during the test.');
+                return false;
+            }
+        });
+
+        // Prevent drag and drop
+        document.addEventListener('dragstart', function (e) {
+            if (blockedActivities.copyPaste) {
+                e.preventDefault();
+                socket.emit('event', { type: 'copy_paste', value: 'drag' });
+                showCheatingWarning('Dragging text is not allowed during the test.');
+            }
+        });
+
+        // Prevent middle-click paste
+        document.addEventListener('mousedown', function (e) {
+            if (blockedActivities.copyPaste && e.button === 1) { // middle click
+                e.preventDefault();
+                socket.emit('event', { type: 'copy_paste', value: 'middle_click' });
+                showCheatingWarning('Middle-click paste is not allowed during the test.');
+            }
+        });
+
+        // Show warning message in the cheating log
+        function showCheatingWarning(message) {
+            const cheatingLog = document.getElementById('cheating-log');
+            cheatingLog.textContent = message;
+            cheatingLog.style.display = 'block';
+
+            // Hide the message after 5 seconds
+            setTimeout(() => {
+                cheatingLog.style.display = 'none';
+            }, 5000);
+        }
+
+        // Handle visibility change (tab switching)
+        document.addEventListener('visibilitychange', function () {
+            if (blockedActivities.tabSwitch && document.visibilityState === 'hidden') {
+                socket.emit('event', { type: 'tab_switch' });
+                // The alert will show when the user returns to the tab
+                setTimeout(() => {
+                    showCheatingWarning('Tab switching is not allowed during the test.');
+                }, 100);
+            }
+        });
+
+        // Handle activity blocked messages from server
+        socket.on('activity_blocked', function (data) {
+            showCheatingWarning(data.message);
+        });
+
+        // Update progress bar
+        function updateProgress() {
+            const elapsed = Date.now() - calibrationStart;
+            const progress = Math.min((elapsed / 120000) * 100, 100);
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+        }
+
+        // Countdown timer
+        const timerElement = document.getElementById('time-remaining');
+        const calibrationInterval = setInterval(() => {
+            const remaining = 120 - Math.floor((Date.now() - calibrationStart) / 1000);
+            if (remaining <= 0) {
+                clearInterval(calibrationInterval);
+                return;
+            }
+            const minutes = Math.floor(remaining / 60);
+            const seconds = remaining % 60;
+            timerElement.innerText = `Time remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            updateProgress();
+        }, 1000);
+
+        // Fullscreen handling
+        function enterFullscreen() {
+            const element = document.documentElement;
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            } else if (element.mozRequestFullScreen) {
+                element.mozRequestFullScreen();
+            } else if (element.webkitRequestFullscreen) {
+                element.webkitRequestFullscreen();
+            } else if (element.msRequestFullscreen) {
+                element.msRequestFullscreen();
+            }
+        }
+
+        function exitHandler() {
+            if (!document.fullscreenElement &&
+                !document.webkitIsFullScreen &&
+                !document.mozFullScreen &&
+                !document.msFullscreenElement) {
+                // Fullscreen was exited
+                socket.emit('event', { type: 'fullscreen_exit' });
+                alert('Please return to fullscreen mode to continue the assessment.');
+                document.getElementById('fullscreen-prompt').style.display = 'block';
+            }
+        }
+
+        // Add fullscreen change event listeners
+        document.addEventListener('fullscreenchange', exitHandler);
+        document.addEventListener('webkitfullscreenchange', exitHandler);
+        document.addEventListener('mozfullscreenchange', exitHandler);
+        document.addEventListener('MSFullscreenChange', exitHandler);
+
+        function startAssessment() {
+            document.getElementById('calibration').style.display = 'none';
+            document.getElementById('fullscreen-prompt').style.display = 'block';
+
+            // Calculate baseline statistics only if we have enough data
+            if (mouseSpeeds.length > 0) {
+                mouseMean = mouseSpeeds.reduce((a, b) => a + b, 0) / mouseSpeeds.length;
+                mouseStd = Math.sqrt(mouseSpeeds.map(x => Math.pow(x - mouseMean, 2))
+                    .reduce((a, b) => a + b, 0) / mouseSpeeds.length);
+            } else {
+                mouseMean = 500; // Default values if no mouse movement during calibration
+                mouseStd = 200;
+            }
+
+            if (keyIntervals.length > 0) {
+                keyMean = keyIntervals.reduce((a, b) => a + b, 0) / keyIntervals.length;
+                keyStd = Math.sqrt(keyIntervals.map(x => Math.pow(x - keyMean, 2))
+                    .reduce((a, b) => a + b, 0) / keyIntervals.length);
+            } else {
+                keyMean = 0.5; // Default values if no typing during calibration
+                keyStd = 0.2;
+            }
+
+            // Send calibration data to the server
+            socket.emit('calibration_data', { mouseMean, mouseStd, keyMean, keyStd });
+
+            document.getElementById('fullscreen-button').addEventListener('click', () => {
+                enterFullscreen();
+                document.getElementById('fullscreen-prompt').style.display = 'none';
+                document.getElementById('assessment').style.display = 'block';
+
+                // Monitor behavior
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('keydown', handleKeyDown);
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+
+                // Start inactivity timer
+                resetInactivityTimer();
+            });
+        }
+
+        function handleMouseMove(e) {
+            if (lastMousePos) {
+                const dx = e.clientX - lastMousePos.x;
+                const dy = e.clientY - lastMousePos.y;
+                const dt = (Date.now() - lastMousePos.time) / 1000;
+                if (dt > 0) { // Prevent division by zero
+                    const speed = Math.sqrt(dx * dx + dy * dy) / dt;
+
+                    // During calibration, collect data
+                    if (Date.now() - calibrationStart < 120000) {
+                        mouseSpeeds.push(speed);
+                    }
+                    // During assessment, check for unusual behavior
+                    else if (mouseMean && mouseStd) {
+                        if (speed > mouseMean + 3 * mouseStd || speed < mouseMean - 3 * mouseStd) {
+                            socket.emit('event', { type: 'unusual_mouse', value: speed });
+                        }
+                    }
+                }
+            }
+            lastMousePos = { x: e.clientX, y: e.clientY, time: Date.now() };
+            resetInactivityTimer();
+        }
+
+        function handleKeyDown(e) {
+            const now = Date.now();
+
+            // Check for blocked shortcuts first
+            if (blockedActivities.shortcuts && (e.ctrlKey || e.metaKey)) {
+                if (['c', 'v', 'x', 'a', 'p', 'r', 'f'].includes(e.key.toLowerCase())) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+
+            if (lastKeyTime) {
+                const interval = (now - lastKeyTime) / 1000;
+
+                // During calibration, collect data
+                if (now - calibrationStart < 120000) {
+                    keyIntervals.push(interval);
+                }
+                // During assessment, check for unusual behavior
+                else if (keyMean && keyStd) {
+                    if (interval < keyMean - 2 * keyStd || interval > keyMean + 2 * keyStd) {
+                        socket.emit('event', { type: 'unusual_keystroke', value: interval });
+                    }
+                }
+            }
+            lastKeyTime = now;
+            resetInactivityTimer();
+        }
+
+        function handleVisibilityChange() {
+            if (document.visibilityState === 'hidden') {
+                socket.emit('event', { type: 'tab_switch' });
+                alert('Please stay on the assessment tab.');
+            }
+        }
+
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                socket.emit('event', { type: 'inactivity' });
+                alert('Please continue with the assessment.');
+            }, 30000); // 30 seconds
+        }
+
+        // Start calibration phase with mouse movement detection
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('keydown', handleKeyDown);
+
+        // Start assessment after calibration period
+        setTimeout(startAssessment, 120000); // 2 minutes
+
+        // Handle server actions
+        socket.on('action', (action) => {
+            if (action === 'subtle_nudge') {
+                alert('Please focus on the assessment.');
+            } else if (action === 'strict_warning') {
+                alert('Strict warning: Please acknowledge to continue.');
+            } else if (action === 'temporary_lock') {
+                document.getElementById('assessment-text').disabled = true;
+                setTimeout(() => {
+                    document.getElementById('assessment-text').disabled = false;
+                    alert('Test unlocked after temporary lock.');
+                }, 60000); // 1 minute temporary lock
+                alert('Test temporarily locked for 1 minute.');
+            } else if (action === 'test_lock') {
+                document.getElementById('assessment-text').disabled = true;
+                alert('Test locked. Contact admin.');
+            }
+        });
+
+        socket.on('unlock', () => {
+            document.getElementById('assessment-text').disabled = false;
+            alert('Test unlocked by admin.');
+        });
+
+        socket.on('disqualify', () => {
+            document.getElementById('assessment').innerHTML = '<h1>Disqualified</h1>';
+            alert('You have been disqualified.');
+        });
+
+        // Add submit button handler
+        document.getElementById('submit-assessment').addEventListener('click', function () {
+            const answers = {
+                mcq: document.querySelector('input[name="q1"]:checked')?.value,
+                essay: document.querySelector('.question-section textarea').value,
+                code: document.querySelector('.code-input').value
+            };
+
+            // Validate answers
+            if (!answers.mcq || !answers.essay || !answers.code) {
+                alert('Please complete all questions before submitting.');
+                return;
+            }
+
+            // Disable submit button
+            this.disabled = true;
+            this.textContent = 'Submitting...';
+
+            // Update assessment state
+            socket.emit('assessment_update', {
+                endTime: Date.now(),
+                answers: answers
+            });
+
+            // Show completion message
+            setTimeout(() => {
+                document.getElementById('assessment').innerHTML = `
+                    <h1>Assessment Completed</h1>
+                    <p>Thank you for completing the assessment. Your responses have been recorded.</p>
+                `;
+            }, 1000);
+        });
+    </script>
+</body>
+
+</html>
